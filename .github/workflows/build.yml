@@ -19,7 +19,7 @@ jobs:
       with:
         ref: ${{github.head_ref}}
         fetch-depth: 0
-        repository: ${{github.head_repo.full_name}}
+        repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
     - name: Build
       # Build JasmineGraph docker image
       run: docker build -t jasminegraph .
