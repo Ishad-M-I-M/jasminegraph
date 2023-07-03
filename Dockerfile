@@ -15,9 +15,10 @@ RUN apt-get -y install docker-ce
 #installing python
 RUN add-apt-repository ppa:deadsnakes/ppa
 RUN apt-get update
-RUN apt-get install -y python3.7 python3.7-dev
-RUN alias python=python3.7
+RUN apt-get install -y python3.8 python3.8-dev
+RUN alias python=python3.8
 RUN apt-get install -y python3-pip
+RUN alias pip=pip3
 RUN apt-get install -y libtool
 
 #creating and moving to /home/ubuntu/software directory. All the essential libraries will be clone to this directory
@@ -97,8 +98,10 @@ WORKDIR /home/ubuntu/software/jasminegraph
 COPY . .
 
 #installing required python packages
-RUN pip3 install tensorflow==2.2.0
-RUN pip3 install -r ./GraphSAGE/requirements
+RUN apt-get -y install gfortran libopenblas-dev liblapack-dev
+RUN apt-get update
+RUN pip install -r ./GraphSAGE/requirements
+RUN pip install -U scikit-learn
 
 #building jasminegraph
 RUN sed -i '/target_link_libraries(JasmineGraph \/usr\/local\/lib\/libmetis.so)/c\target_link_libraries(JasmineGraph \/usr\/local\/lib\/libmetis.so)' CMakeLists.txt
