@@ -40,6 +40,7 @@ RUN git switch -c build tags/v5.1.1-DistDGL-v0.5
 RUN git submodule update --init
 RUN make config shared=1 cc=gcc prefix=~/local
 RUN make install
+RUN export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:/home/ubuntu/local/include
 
 #installing spdlog
 WORKDIR /home/ubuntu/software
