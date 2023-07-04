@@ -4,7 +4,7 @@
 #ifndef FLATBUFFERS_GENERATED_EDGESTORE_JASMINGRAPH_EDGESTORE_H_
 #define FLATBUFFERS_GENERATED_EDGESTORE_JASMINGRAPH_EDGESTORE_H_
 
-#include "flatbuffers/flatbuffers.h"
+#include <flatbuffers/flatbuffers.h>
 
 namespace JasmineGraph {
     namespace Edgestore {

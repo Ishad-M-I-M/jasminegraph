@@ -119,7 +119,7 @@ public:
     static const string END_OF_MESSAGE;
     JasmineGraphInstanceService();
 
-    int run(string profile, string masterHost, string hostName, int serverPort, int serverDataPort);
+    void run(string profile, string masterHost, string hostName, int serverPort, int serverDataPort);
 
     static bool isGraphDBExists(std::string graphId, std::string partitionId);
     static bool isInstanceCentralStoreExists(std::string graphId, std::string partitionId);
@@ -162,16 +162,6 @@ public:
 
     static void startCollectingLoadAverage();
 
-    static void initServer(string trainData);
-
-    static void initOrgServer(string trainData);
-
-    static void initAgg(string trainData);
-
-    static void initClient(string trainData);
-
-    static void mergeFiles(string trainData);
-
     static std::map<int,std::vector<std::string>> iterationData;
 
     static map<long, long> calculateLocalOutDegreeDistribution(string graphID, string partitionID,
@@ -184,7 +174,6 @@ public:
     static bool sendFileThroughService(std::string host, int dataPort, std::string fileName,
                                        std::string filePath, std::string masterIP);
     static int partitionCounter;
-
 };
 
 

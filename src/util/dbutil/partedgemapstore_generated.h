@@ -4,7 +4,7 @@
 #ifndef FLATBUFFERS_GENERATED_PARTEDGEMAPSTORE_JASMINEGRAPH_PARTEDGEMAPSTORE_H_
 #define FLATBUFFERS_GENERATED_PARTEDGEMAPSTORE_JASMINEGRAPH_PARTEDGEMAPSTORE_H_
 
-#include "flatbuffers/flatbuffers.h"
+#include <flatbuffers/flatbuffers.h>
 
 namespace JasmineGraph {
 namespace PartEdgeMapStore {

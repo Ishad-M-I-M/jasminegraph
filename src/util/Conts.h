@@ -128,7 +128,6 @@ public:
         static const std::string BATCH_SIZE;
         static const std::string VALIDATE_ITER;
         static const std::string EPOCHS;
-        static const std::string MODEL_ID;
     };
 
     struct SLA_CATEGORY {

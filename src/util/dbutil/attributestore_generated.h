@@ -4,7 +4,7 @@
 #ifndef FLATBUFFERS_GENERATED_ATTRIBUTESTORE_JASMINEGRAPH_ATTRIBUTESTORE_H_
 #define FLATBUFFERS_GENERATED_ATTRIBUTESTORE_JASMINEGRAPH_ATTRIBUTESTORE_H_
 
-#include "flatbuffers/flatbuffers.h"
+#include <flatbuffers/flatbuffers.h>
 
 namespace JasmineGraph {
 namespace AttributeStore {
