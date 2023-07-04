@@ -38,7 +38,7 @@ RUN git clone https://github.com/KarypisLab/METIS.git
 WORKDIR /home/ubuntu/software/METIS
 RUN git switch -c build tags/v5.1.1-DistDGL-v0.5
 RUN git submodule update --init
-RUN make config shared=1 cc=gcc prefix=~/local
+RUN make config shared=1 cc=gcc prefix=/home/ubuntu/local
 RUN make install
 
 #installing spdlog
