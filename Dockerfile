@@ -40,7 +40,6 @@ RUN git switch -c build tags/v5.1.1-DistDGL-v0.5
 RUN git submodule update --init
 RUN make config shared=1 cc=gcc prefix=~/local
 RUN make install
-RUN export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:/home/ubuntu/local/include
 
 #installing spdlog
 WORKDIR /home/ubuntu/software
@@ -93,8 +92,8 @@ ENV PATH="/home/ubuntu/software/pigz-2.7/pigz:${PATH}"
 
 #installing nlohmann_json
 WORKDIR /home/ubuntu/software
-RUN git clone https://github.com/nlohmann/json.git
-WORKDIR /home/ubuntu/software/json
+RUN git clone https://github.com/nlohmann/json.git nlohmann_json
+WORKDIR /home/ubuntu/software/nlohmann_json
 RUN git checkout tags/v3.9.1
 RUN cmake .
 RUN make && make install
