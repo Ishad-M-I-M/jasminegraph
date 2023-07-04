@@ -90,6 +90,14 @@ WORKDIR /home/ubuntu/software/pigz-2.7
 RUN make
 ENV PATH="/home/ubuntu/software/pigz-2.7/pigz:${PATH}"
 
+#installing nlohmann_json
+WORKDIR /home/ubuntu/software
+RUN git clone https://github.com/nlohmann/json.git
+WORKDIR /home/ubuntu/software/json
+RUN git checkout tags/v3.9.1
+RUN cmake .
+RUN make && make install
+
 #copying jasminegraph source
 WORKDIR /home/
 ENV HOME="/home/ubuntu"
