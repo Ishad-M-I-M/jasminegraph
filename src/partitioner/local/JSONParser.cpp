@@ -20,7 +20,7 @@ limitations under the License.
 
 #include <sstream>
 #include <string>
-#include <jsoncpp/json/json.h>
+#include "json/json.h"
 #include <ctime>
 #include <chrono>
 #include <thread>
