@@ -24,8 +24,10 @@ DataPublisher::DataPublisher(int worker_port, std::string worker_address) {
     this->worker_address = worker_address;
     struct hostent *server;
 
+    data_publisher_logger.log("======================== worker address : " + worker_address, "info");
     server = gethostbyname(worker_address.c_str());
     if (server == NULL) {
+        data_publisher_logger.log("====================== no host name", "error");
         std::cerr << "ERROR, no host named " << server << std::endl;
         exit(0);
     }
@@ -36,10 +38,16 @@ DataPublisher::DataPublisher(int worker_port, std::string worker_address) {
     serv_addr.sin_port = htons(worker_port);
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         data_publisher_logger.error("Socket creation error!");
+    } else {
+        data_publisher_logger.error("Socket creation suceeded!");
     }
+
+    data_publisher_logger.log("================================= before connect ", "info");
     if (Utils::connect_wrapper(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
         data_publisher_logger.error("Connection Failed!");
     }
+
+    data_publisher_logger.log("================================= data publisher created", "info");
 }
 
 DataPublisher::~DataPublisher() { close(sock); }

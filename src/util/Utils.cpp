@@ -607,6 +607,7 @@ std::string Utils::checkFlag(std::string flagPath){
 int Utils::connect_wrapper(int sock, const sockaddr *addr, socklen_t slen) {
     int retry = 0;
     do {
+        util_logger.log("Trying to connect to [" + to_string(retry) + "]: " + string(inet_ntoa(((struct sockaddr_in *)addr)->sin_addr)) + ":" + to_string((((struct sockaddr_in *)addr)->sin_port)), "info");
         if (retry) sleep(retry * 2);
         if (connect(sock, addr, slen) == 0) {
             return 0;

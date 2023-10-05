@@ -102,8 +102,8 @@ listen_to_kafka_topic(KafkaConnector *kstream, Partitioner &graphPartitioner, ve
 
 void *frontendservicesesion(std::string masterIP, int connFd, SQLiteDBInterface sqlite,
                             PerformanceSQLiteDBInterface perfSqlite, JobScheduler jobScheduler) {
-    frontend_logger.log("Thread No: " + to_string(pthread_self()), "info");
-    frontend_logger.log("Master IP: " + masterIP, "info");
+    frontend_logger.log("=============== Thread No: " + to_string(pthread_self()), "info");
+    frontend_logger.log("=============== Master IP: " + masterIP, "info");
     char data[FRONTEND_DATA_LENGTH + 1];
     bzero(data, FRONTEND_DATA_LENGTH + 1);
     Utils utils;
@@ -119,16 +119,21 @@ void *frontendservicesesion(std::string masterIP, int connFd, SQLiteDBInterface 
     cppkafka::Configuration configs;
     KafkaConnector *kstream;
     Partitioner graphPartitioner(numberOfPartitions, 1, spt::Algorithms::HASH);
-
+    frontend_logger.log("============================ Before loop", "info");
     for (int i = 0; i < workerList.size(); i++) {
 
         Utils::worker currentWorker = workerList.at(i);
         string workerHost = currentWorker.hostname;
         string workerID = currentWorker.workerID;
         int workerPort = atoi(string(currentWorker.port).c_str());
+        
+        frontend_logger.log("============================ Before data publisher", "info");
         DataPublisher *workerClient = new DataPublisher(workerPort, workerHost);
+        frontend_logger.log("============================ After data publisher", "info");
+
         workerClients.push_back(workerClient);
     }
+    frontend_logger.log("============================ After loop", "info");
     bool loop = false;
     while (!loop) {
         if (currentFESession == Conts::MAX_FE_SESSIONS + 1) {
@@ -1699,7 +1704,10 @@ int JasmineGraphFrontEnd::run() {
         return 0;
     }
 
-    listen(listenFd, 10);
+    if (listen(listenFd, 10) != 0){
+        frontend_logger.log("================================ Cannot listen", "error");
+        return 0;
+    }
 
     std::thread *myThreads = new std::thread[20];
     std::vector<std::thread> threadVector;
@@ -1708,11 +1716,12 @@ int JasmineGraphFrontEnd::run() {
     int noThread = 0;
 
     while (true) {
-        frontend_logger.log("Frontend Listening", "info");
+        frontend_logger.log("************************ Frontend Listening", "info");
 
         //this is where client connects. svr will hang in this mode until client conn
         connFd = accept(listenFd, (struct sockaddr *) &clntAdd, &len);
 
+        frontend_logger.log("************************ Accepted", "info");
         if (connFd < 0) {
             frontend_logger.log("Cannot accept connection", "error");
             return 0;

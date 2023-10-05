@@ -2,6 +2,7 @@ FROM miyurud/jasminegraph:20230909T110050
 ENV HOME="/home/ubuntu"
 ENV JASMINEGRAPH_HOME="/home/ubuntu/software/jasminegraph"
 
+RUN apt-get update && apt-get install telnet -y
 WORKDIR /home/ubuntu/software/jasminegraph
 
 COPY ./GraphSAGE ./GraphSAGE
