@@ -125,6 +125,8 @@ no_of_workers="${NO_OF_WORKERS}" \
     enable_nmon="${ENABLE_NMON}" \
     envsubst <"./k8s/master-deployment.yaml" | kubectl apply -f -
 
+kubectl apply -f ./k8s/hadoop.yaml
+
 # Wait till all pods are running
 cur_timestamp="$(date +%s)"
 end_timestamp="$((cur_timestamp + TIMEOUT_SECONDS))"

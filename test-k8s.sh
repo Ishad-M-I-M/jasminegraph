@@ -76,21 +76,27 @@ clear_resources() {
 }
 
 ready_hdfs() {
+    # Get the Namenode pod name
+    NAMENODE_POD=$(kubectl get pods -l app=hdfs-namenode -o jsonpath='{.items[0].metadata.name}')
+    if [[ -z ${NAMENODE_POD} ]]; then
+        echo "Error: HDFS Namenode pod not found."
+        return 1
+    fi
+    echo "Namenode pod found: ${NAMENODE_POD}"
 
-    echo "Starting HDFS using Docker Compose..."
-    docker compose -f "${TEST_ROOT}/docker-compose-k8s-hdfs.yaml" up >"$RUN_LOG" 2>&1 &
-
-    echo "Waiting for Hadoop Namenode to be ready..."
-    while ! curl -s http://localhost:9870 &>/dev/null; do
-        echo "Hadoop Namenode is not ready yet. Retrying in 5 seconds..."
-        sleep 5
+    # Wait for Namenode to be fully ready using both ports
+    echo "Waiting for Namenode to be ready..."
+    while ! (kubectl exec ${NAMENODE_POD} -- curl -s http://localhost:9870 >/dev/null && \
+             kubectl exec ${NAMENODE_POD} -- nc -z localhost 9000); do
+        echo "Namenode not ready yet, waiting..."
+        sleep 10
     done
-    echo "Hadoop Namenode is ready."
 
+    # Check and exit safemode using localhost
     echo "Checking and exiting safe mode if necessary..."
-    if docker exec -i hdfs-namenode hadoop dfsadmin -safemode get | grep -q "Safe mode is ON"; then
+    if kubectl exec ${NAMENODE_POD} -- hdfs dfsadmin -fs hdfs://localhost:9000 -safemode get | grep -q "Safe mode is ON"; then
         echo "Exiting safe mode..."
-        docker exec -i hdfs-namenode hadoop dfsadmin -safemode leave || {
+        kubectl exec ${NAMENODE_POD} -- hdfs dfsadmin -fs hdfs://localhost:9000 -safemode leave || {
             echo "Error exiting safe mode."
             return 1
         }
@@ -98,54 +104,27 @@ ready_hdfs() {
         echo "Namenode is not in safe mode."
     fi
 
-    echo "Fetching JasmineGraph Master pod name..."
-    MASTER_POD=$(kubectl get pods | grep jasminegraph-master | awk '{print $1}')
-    if [[ -z ${MASTER_POD} ]]; then
-        echo "Error: JasmineGraph Master pod not found."
-        return 1
-    fi
-    echo "Master pod found: ${MASTER_POD}"
-
+    # File operations
     FILE_NAME="powergrid.dl"
     LOCAL_DIRECTORY="/var/tmp/data/"
     LOCAL_FILE_PATH="${LOCAL_DIRECTORY}${FILE_NAME}"
     HDFS_DIRECTORY="/home/"
     HDFS_FILE_PATH="${HDFS_DIRECTORY}${FILE_NAME}"
 
-    echo "Ensuring local directory exists..."
-    mkdir -p "${LOCAL_DIRECTORY}" || {
-        echo "Error creating local directory."
+    echo "Creating local directory in Namenode pod..."
+    kubectl exec ${NAMENODE_POD} -- mkdir -p "${LOCAL_DIRECTORY}" || {
+        echo "Error creating directory in Namenode pod."
         return 1
     }
 
-    echo "Copying file from JasmineGraph Master pod..."
-    kubectl cp "${MASTER_POD}:${LOCAL_FILE_PATH}" "${LOCAL_FILE_PATH}" || {
-        echo "Error copying file from JasmineGraph Master pod."
-        return 1
-    }
-
-    echo "Fetching HDFS Namenode container name..."
-    NAMENODE_CONTAINER=$(docker ps --format '{{.Names}}' | grep namenode)
-    if [[ -z ${NAMENODE_CONTAINER} ]]; then
-        echo "Error: HDFS Namenode container not found."
-        return 1
-    fi
-    echo "Namenode container found: ${NAMENODE_CONTAINER}"
-
-    docker exec -i "${NAMENODE_CONTAINER}" mkdir -p "${LOCAL_DIRECTORY}"
-
-    echo "Copying file to HDFS Namenode container..."
-    docker cp "${LOCAL_FILE_PATH}" "${NAMENODE_CONTAINER}:${LOCAL_FILE_PATH}" || {
-        echo "Error copying file to Namenode container."
+    echo "Copying file to Namenode pod..."
+    kubectl cp "tests/integration/env_init/data/powergrid.dl" "${NAMENODE_POD}:${LOCAL_FILE_PATH}" || {
+        echo "Error copying file to Namenode pod."
         return 1
     }
 
     echo "Uploading file to HDFS..."
-    docker exec -i "${NAMENODE_CONTAINER}" hdfs dfs -mkdir -p "${HDFS_DIRECTORY}" || {
-        echo "Error creating HDFS directory."
-        return 1
-    }
-    docker exec -i "${NAMENODE_CONTAINER}" hdfs dfs -put -f "${LOCAL_FILE_PATH}" "${HDFS_FILE_PATH}" || {
+    kubectl exec ${NAMENODE_POD} -- bash -c "hdfs dfs -fs hdfs://localhost:9000 -mkdir -p ${HDFS_DIRECTORY} && hdfs dfs -fs hdfs://localhost:9000 -put -f ${LOCAL_FILE_PATH} ${HDFS_FILE_PATH}" || {
         echo "Error uploading file to HDFS."
         return 1
     }

@@ -26,6 +26,7 @@ limitations under the License.
 #include <set>
 #include <thread>
 
+#include "../../globals.h"
 #include "../metadb/SQLiteDBInterface.h"
 #include "../nativestore/DataPublisher.h"
 #include "../nativestore/RelationBlock.h"
@@ -1354,6 +1355,9 @@ void addStreamHDFSCommand(std::string masterIP, int connFd, std::string &hdfsSer
     }
 
     if (userResS == "y") {
+        if (jasminegraph_profile == PROFILE_K8S) {
+            hdfsServerIp = "http://hdfs-namenode";
+        }
         hdfsServerIp = Utils::getJasmineGraphProperty("org.jasminegraph.server.streaming.hdfs.host");
         hdfsPort = Utils::getJasmineGraphProperty("org.jasminegraph.server.streaming.hdfs.port");
     } else {

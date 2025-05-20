@@ -1,0 +1,295 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hadoop-config
+data:
+  HADOOP_OPTS: "-Djava.net.preferIPv4Stack=true"
+  CORE_CONF_fs_defaultFS: "hdfs://hdfs-namenode:9000"
+  HDFS_CONF_dfs_namenode_name_dir: "/hadoop/dfs/name"
+  HDFS_CONF_dfs_datanode_data_dir: "/hadoop/dfs/data"
+  YARN_CONF_yarn_resourcemanager_hostname: "hdfs-resourcemanager"
+  YARN_CONF_yarn_nodemanager_aux-services: "mapreduce_shuffle"
+  YARN_CONF_yarn_nodemanager_aux-services_mapreduce_shuffle_class: "org.apache.hadoop.mapred.ShuffleHandler"
+  YARN_CONF_yarn_resourcemanager_scheduler_address: "hdfs-resourcemanager:8031"
+  YARN_CONF_yarn_resourcemanager_resource_tracker_address: "hdfs-resourcemanager:8031"
+  YARN_CONF_yarn_resourcemanager_address: "hdfs-resourcemanager:8030"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hadoop-namenode-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hadoop-datanode-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: apps/v1
+kind: StatefulSet  # Changed from Deployment
+metadata:
+  name: hdfs-namenode
+spec:
+  serviceName: hdfs-namenode  # Required for StatefulSet
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hdfs-namenode
+  template:
+    metadata:
+      labels:
+        app: hdfs-namenode
+    spec:
+      containers:
+        - name: namenode
+          image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+          envFrom:
+            - configMapRef:
+                name: hadoop-config
+          env:
+            - name: CLUSTER_NAME
+              value: "test"
+            - name: HDFS_CONF_dfs_namenode_rpc_address
+              value: "0.0.0.0"  # Explicitly bind to all interfaces
+          ports:
+            - containerPort: 9870
+              name: webui
+            - containerPort: 9000
+              name: rpc
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 9870
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 9000
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          volumeMounts:
+            - name: hadoop-namenode
+              mountPath: /hadoop/dfs/name
+  volumeClaimTemplates:
+    - metadata:
+        name: hadoop-namenode
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hdfs-namenode
+spec:
+  selector:
+    app: hdfs-namenode
+  ports:
+    - name: webui
+      port: 9870
+      targetPort: 9870
+      nodePort: 30070
+    - name: rpc
+      port: 9000
+      targetPort: 9000
+  clusterIP: None  # Important for StatefulSet-like behavior
+  type: ClusterIP  # Changed from NodePort
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hdfs-datanode
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hdfs-datanode
+  template:
+    metadata:
+      labels:
+        app: hdfs-datanode
+    spec:
+      containers:
+        - name: datanode
+          image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+          envFrom:
+            - configMapRef:
+                name: hadoop-config
+          ports:
+            - containerPort: 9864
+              name: webui
+            - containerPort: 50010
+              name: data-transfer
+            - containerPort: 50020
+              name: ipc-server
+            - containerPort: 50075
+              name: datanode-webui
+          volumeMounts:
+            - name: hadoop-datanode
+              mountPath: /hadoop/dfs/data
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 9864
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: hadoop-datanode
+          persistentVolumeClaim:
+            claimName: hadoop-datanode-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hdfs-datanode
+spec:
+  selector:
+    app: hdfs-datanode
+  ports:
+    - name: webui
+      port: 9864
+      targetPort: 9864
+    - name: data-transfer
+      port: 50010
+      targetPort: 50010
+    - name: ipc-server
+      port: 50020
+      targetPort: 50020
+    - name: datanode-webui
+      port: 50075
+      targetPort: 50075
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hdfs-resourcemanager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hdfs-resourcemanager
+  template:
+    metadata:
+      labels:
+        app: hdfs-resourcemanager
+    spec:
+      containers:
+        - name: resourcemanager
+          image: bde2020/hadoop-resourcemanager:2.0.0-hadoop3.2.1-java8
+          envFrom:
+            - configMapRef:
+                name: hadoop-config
+          ports:
+            - containerPort: 8088
+              name: webui
+            - containerPort: 8030
+              name: rm-address
+            - containerPort: 8031
+              name: scheduler
+            - containerPort: 8032
+              name: ipc
+            - containerPort: 8033
+              name: admin
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8088
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "1"
+            limits:
+              memory: "4Gi"
+              cpu: "2"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hdfs-resourcemanager
+spec:
+  selector:
+    app: hdfs-resourcemanager
+  ports:
+    - name: webui
+      port: 8088
+      targetPort: 8088
+      nodePort: 30088
+    - name: scheduler
+      port: 8031
+      targetPort: 8031
+    - name: ipc
+      port: 8032
+      targetPort: 8032
+    - name: rm-address
+      port: 8030
+      targetPort: 8030
+    - name: admin
+      port: 8033
+      targetPort: 8033
+  type: NodePort
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hdfs-nodemanager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hdfs-nodemanager
+  template:
+    metadata:
+      labels:
+        app: hdfs-nodemanager
+    spec:
+      containers:
+        - name: nodemanager
+          image: bde2020/hadoop-nodemanager:2.0.0-hadoop3.2.1-java8
+          envFrom:
+            - configMapRef:
+                name: hadoop-config
+          ports:
+            - containerPort: 8042
+              name: webui
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8042
+            initialDelaySeconds: 60  # Longer initial delay to wait for RM
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "1"
+            limits:
+              memory: "4Gi"
+              cpu: "2"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hdfs-nodemanager
+spec:
+  selector:
+    app: hdfs-nodemanager
+  ports:
+    - name: webui
+      port: 8042
+      targetPort: 8042
+  type: ClusterIP
